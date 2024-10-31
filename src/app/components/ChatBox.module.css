@@ -1,0 +1,30 @@
+.log {
+    grid-column: 2 / 3;
+    grid-row: 2 / 3;
+}
+
+.human {
+    font-weight: bold;
+    color: black;
+}
+
+.bot {
+    font-style: italic;
+    color: darkgrey;
+}
+
+.input {
+    grid-column: 2 / 3;
+    grid-row: 3 / 4;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    margin-bottom: 30px;
+}
+
+.inputText {
+    border-radius: 20px;
+}
+
+.inputButton {
+    border-radius: 20px;
+}
