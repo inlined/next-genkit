@@ -15,7 +15,9 @@ const ChatBox = () => {
 
     const original = [...log, {sender: "human" as const, value: inputValue}]
     setLog([...original, { sender: "bot", value: "..."}]);
-    const response = await fetch("/api/chat");
+    const response = await fetch("/api/chat", {
+      method: "POST",
+    });
     const text = (await response.json())[dataField];
     setLog([...original, { sender: "bot", value: text }]);
   }
