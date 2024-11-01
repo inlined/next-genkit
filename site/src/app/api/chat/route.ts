@@ -12,3 +12,5 @@ export async function POST(req: NextApiRequest) {
   console.log(`Result is ${result}`);
   return NextResponse.json({result});
 }
+
+(POST as any).howStrictIsVercel = false;
