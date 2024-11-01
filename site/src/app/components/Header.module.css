@@ -1,7 +1,12 @@
 .header {
     grid-column: 1 / 4;
-    text-align: center;
-    background-color:blue;
-    vertical-align: center;
+    background-color:seagreen;
     color: white;
+}
+
+.header h3 {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
