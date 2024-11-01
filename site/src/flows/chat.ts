@@ -51,22 +51,21 @@ const promptText = `
  {{history}}
  
  {{role "user"}}
- Please answer the user's question or continue the conversation`
+ Please answer the user's question or continue the conversation.
+ `.trim();
 
 const prompt = ai.definePrompt({
     name: "chatPrompt",
     input: {
         schema: InputSchema,
-        default: [{sender: "user", message: "help me use Firebase"}],
     },
     output: {
         schema: OutputSchema,
     },
     config: {
-        temperature: 0.1,
-        googleSearchRetrieval: {},
+        temperature: 0.95,
     },
-    model: "vertexai/gemini-1.5-pro"
+    model: "vertexai/gemini-1.5-flash"
 }, promptText);
 
 export const chat = ai.defineFlow({

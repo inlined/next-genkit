@@ -11,5 +11,7 @@ export async function POST(req: NextApiRequest) {
   const t = await text(req.body);
   console.log(`Text is ${t}`);
   const json = JSON.parse(t);
-  return NextResponse.json({[dataField]: await chat(json)});
+  const result = await chat(json);
+  console.log(`Result is ${result}`);
+  return NextResponse.json({[dataField]: result});
 }

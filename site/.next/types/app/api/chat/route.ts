@@ -1,4 +1,4 @@
-// File: /Users/inlined/git/next-genkit/src/app/api/chat/route.ts
+// File: /Users/inlined/git/next-genkit/site/src/app/api/chat/route.ts
 import * as entry from '../../../../../src/app/api/chat/route.js'
 import type { NextRequest } from 'next/server.js'
 
