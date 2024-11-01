@@ -1,5 +1,5 @@
 import { ai } from "./init";
-import { HistorySchema } from "@/types";
+import { ChatRequestSchema } from "@/types";
 import * as z from "zod";
 
 // TODO: Move into dotprompt file.
@@ -50,20 +50,17 @@ const promptText = `
 const prompt = ai.definePrompt({
     name: "chatPrompt",
     input: {
-        schema: HistorySchema,
+        schema: ChatRequestSchema,
     },
     output: {
         schema: z.string(),
-    },
-    config: {
-        temperature: 0.95,
     },
     model: "vertexai/gemini-1.5-flash"
 }, promptText);
 
 export const chat = ai.defineFlow({
     name: "chat",
-    inputSchema: HistorySchema,
+    inputSchema: ChatRequestSchema,
     outputSchema: z.string(),
 }, async (input): Promise<string> => {
     return (await prompt(input)).text;
