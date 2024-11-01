@@ -1,6 +1,7 @@
 import { ai } from "./init";
 import { ChatRequestSchema } from "@/types";
 import * as z from "zod";
+import { ZodString } from "zod";
 
 // TODO: Move into dotprompt file.
 // TODO: Figure out why this doesn't actually provide any help even when adding groundSearchRetrieval
@@ -47,7 +48,7 @@ const promptText = `
  {{query}}
  `.trim();
 
-const prompt = ai.definePrompt({
+const prompt = ai.definePrompt<typeof ChatRequestSchema, ZodString>({
     name: "chatPrompt",
     input: {
         schema: ChatRequestSchema,
@@ -63,5 +64,5 @@ export const chat = ai.defineFlow({
     inputSchema: ChatRequestSchema,
     outputSchema: z.string(),
 }, async (input): Promise<string> => {
-    return (await prompt(input)).text;
+    return (await prompt(input)).output!;
 });
