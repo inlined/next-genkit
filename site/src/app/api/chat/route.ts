@@ -3,9 +3,6 @@ import { NextResponse } from 'next/server';
 import { text } from "stream/consumers";
 import { chat } from "@/flows/chat";
 
-// Where the response is
-export const dataField = "result";
-
 // TODO: make util function
 export async function POST(req: NextApiRequest) {
   const t = await text(req.body);
@@ -13,5 +10,5 @@ export async function POST(req: NextApiRequest) {
   const json = JSON.parse(t);
   const result = await chat(json);
   console.log(`Result is ${result}`);
-  return NextResponse.json({[dataField]: result});
+  return NextResponse.json({result});
 }
