@@ -20,13 +20,15 @@ body {
 }
 
 .header {
-  grid-area: "Header";
+  grid-area: Header;
+  width: 100%;
+  height: 100%;
 }
 
 .chat-log {
-  grid-area: "ChatLog";
+  grid-area: ChatLog;
 }
 
 .chat-input {
-  grid-area: "ChatInput";
+  grid-area: ChatInput;
 }
