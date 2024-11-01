@@ -13,4 +13,20 @@ body {
   height: 100vh;
   width: 100vw;
   gap: 10px;
+  grid-template-areas:
+    "Header Header Header"
+    ". ChatLog ."
+    ". ChatInput .";
+}
+
+.header {
+  grid-area: "Header";
+}
+
+.chat-log {
+  grid-area: "ChatLog";
+}
+
+.chat-input {
+  grid-area: "ChatInput";
 }

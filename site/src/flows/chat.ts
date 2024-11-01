@@ -1,13 +1,7 @@
 import { defineDotprompt } from "@genkit-ai/dotprompt";
 import { ai } from "./init";
+import { HistorySchema, Message, MessageSchema } from "@/types";
 import * as z from "zod";
-
-const InputSchema = z.object({
-    "history": z.array(
-        z.object({sender: z.string(), message: z.string()})
-    ),
-});
-const OutputSchema = z.string();
 
 // TODO: Move into dotprompt file.
 // TODO: Figure out why this doesn't actually provide any help even when adding groundSearchRetrieval
@@ -57,10 +51,10 @@ const promptText = `
 const prompt = ai.definePrompt({
     name: "chatPrompt",
     input: {
-        schema: InputSchema,
+        schema: HistorySchema,
     },
     output: {
-        schema: OutputSchema,
+        schema: z.string(),
     },
     config: {
         temperature: 0.95,
@@ -70,8 +64,8 @@ const prompt = ai.definePrompt({
 
 export const chat = ai.defineFlow({
     name: "chat",
-    inputSchema: InputSchema,
-    outputSchema: OutputSchema,
+    inputSchema: HistorySchema,
+    outputSchema: z.string(),
 }, async (input): Promise<string> => {
     return (await prompt(input)).text;
 });
