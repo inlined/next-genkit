@@ -1,10 +1,10 @@
 import styles from "./Header.module.css";
 
-const Header = ({style}: {style?: any}) => {
+const Header = () => {
     return (
         <>
-        <div className={styles.header} style={style}>
-            <h3><span className="material-icons" id={styles.icon}>chat_bubble_outline</span><span>Scuba Talk</span></h3>
+        <div className={styles.header}> 
+            <span className="material-icons" id={styles.icon}>chat_bubble_outline</span><span>Scuba Talk</span>
         </div>
       </>
     )
