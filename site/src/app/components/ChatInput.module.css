@@ -1,0 +1,14 @@
+.input {
+    display: flex;
+    gap: 8px;
+}
+
+.inputText {
+    flex: 1;
+    border-radius: 8px;
+}
+
+.inputButton {
+    flex-shrink: 0;
+    border-radius: 8px;
+}

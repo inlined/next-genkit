@@ -1,0 +1,37 @@
+.log * {
+    padding: 2px 0;
+    margin: 0;
+    line-height: 1.2;
+}
+
+.human {
+    font-weight: bold;
+    color: black;
+}
+
+.bot {
+    color: #555555;
+}
+
+@keyframes thinking {
+    0% { background-position: 0% 0 }
+    100% { background-position: 200% 0 }
+}
+
+.thinking {
+    font-weight: bold;
+    background: linear-gradient(
+        90deg,
+        #333,
+        #888 20%,
+        #FFF 40%,
+        #888 60%,
+        #333 80%
+    );
+    background-size: 200%; /* Make it large enough to scroll */
+    background-clip: text;
+    -webkit-background-clip: text; /* For Safari and Chrome */
+    -webkit-text-fill-color: transparent;
+    color: transparent; /* Hide original text color */
+    animation: thinking 2s infinite linear;
+}
