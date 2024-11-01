@@ -1,0 +1,44 @@
+/*!*********************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[13].oneOf[5].use[2]!./node_modules/next/dist/build/webpack/loaders/postcss-loader/src/index.js??ruleSet[1].rules[13].oneOf[5].use[3]!./src/app/components/ChatBox.module.css ***!
+  \*********************************************************************************************************************************************************************************************************************************************************************************/
+.ChatBox_log__rsiIy {
+    grid-column: 2 / 3;
+    grid-row: 2 / 3;
+}
+
+.ChatBox_human__OEoAm {
+    font-weight: bold;
+    color: black;
+}
+
+.ChatBox_bot___K4MD {
+    font-style: italic;
+    color: #555555;
+}
+
+.ChatBox_input__nUkdy {
+    grid-column: 2 / 3;
+    grid-row: 3 / 4;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    margin-bottom: 30px;
+}
+
+.ChatBox_inputText__9D9fX {
+    border-radius: 8px;
+    margin-right: 8px;
+}
+
+.ChatBox_inputButton__j_k1K {
+    border-radius: 8px;
+}
+/*!********************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[13].oneOf[5].use[2]!./node_modules/next/dist/build/webpack/loaders/postcss-loader/src/index.js??ruleSet[1].rules[13].oneOf[5].use[3]!./src/app/components/Header.module.css ***!
+  \********************************************************************************************************************************************************************************************************************************************************************************/
+.Header_header__b54d9 {
+    grid-column: 1 / 4;
+    text-align: center;
+    background-color:blue;
+    vertical-align: center;
+    color: white;
+}
