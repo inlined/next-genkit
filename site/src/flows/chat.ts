@@ -1,6 +1,5 @@
-import { defineDotprompt } from "@genkit-ai/dotprompt";
 import { ai } from "./init";
-import { HistorySchema, Message, MessageSchema } from "@/types";
+import { HistorySchema } from "@/types";
 import * as z from "zod";
 
 // TODO: Move into dotprompt file.
@@ -41,11 +40,11 @@ const promptText = `
  If a user asks how to get started, tell them that they need to look at the medical
  form because they may need a doctor's signature before they are allowed in the water.
  
- The following is hte history of your conversation:
+ The following is the history of your conversation:
  {{history}}
  
  {{role "user"}}
- Please answer the user's question or continue the conversation.
+ {{query}}
  `.trim();
 
 const prompt = ai.definePrompt({
