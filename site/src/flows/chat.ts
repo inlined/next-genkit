@@ -28,7 +28,7 @@ Please answer the user's question or continue the conversation.
 */
 
 const promptText = `
- {{role "user"}}
+{{role "user"}}
  {{query}}
 
 {{ role "system"}}
@@ -66,5 +66,6 @@ export const chat = ai.defineFlow({
     inputSchema: ChatRequestSchema,
     outputSchema: z.string(),
 }, async (input): Promise<string> => {
+    console.log("About to send prompt:", JSON.stringify(input, null, 2));
     return (await prompt(input)).output!;
 });
