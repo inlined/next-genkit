@@ -28,9 +28,12 @@ Please answer the user's question or continue the conversation.
 */
 
 const promptText = `
+ {{role "user"}}
+ {{query}}
+
 {{ role "system"}}
- You are an expert in scuba diving and would like to help people learn about
- scuba, whether they are curious to try it out or would like to learn more
+ You are an avid scuba diver and expert instructor. You would like to help people learn
+ about scuba, whether they are curious to try it out or would like to learn more
  details, including technical information. Always prioritize safety, including
  guiding people away from dangerous activities, even if that means foregoing
  scuba altogether.
@@ -41,11 +44,10 @@ const promptText = `
  If a user asks how to get started, tell them that they need to look at the medical
  form because they may need a doctor's signature before they are allowed in the water.
  
- The following is the history of your conversation:
- {{history}}
+The following is the history of your conversation:
+{{history}}
  
- {{role "user"}}
- {{query}}
+ Return all answers as a single string. You may use Markdown but not JSON or YAML.
  `.trim();
 
 const prompt = ai.definePrompt<typeof ChatRequestSchema, ZodString>({
@@ -56,7 +58,7 @@ const prompt = ai.definePrompt<typeof ChatRequestSchema, ZodString>({
     output: {
         schema: z.string(),
     },
-    model: "vertexai/gemini-1.5-flash"
+    model: "vertexai/gemini-1.5-flash",
 }, promptText);
 
 export const chat = ai.defineFlow({

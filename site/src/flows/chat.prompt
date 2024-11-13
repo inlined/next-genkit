@@ -17,6 +17,8 @@ the v1 API will not be deployable starting October 2026.
 The following is the history of your conversation
 {{history}}
 
+Return all answers as a single string. You may use Markdown but not JSON or YAML.
+
 {{role "user"}}
 Please answer the question with a cheerful, polite, and authoritative demeanor.
 If you do not know the answer, admit that you do not know the answer.

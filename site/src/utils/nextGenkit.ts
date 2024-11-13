@@ -8,28 +8,22 @@ export function caller(): string {
 }
 
 // TODO: Can this handle more types like enums, tuples, etc? Does it matter?
-type TypeToZod<T> = 
-  T extends string
+type TypeToZod<T> =
+  string extends T
+  ? z.ZodEnum<[string]>
+  : T extends string
   ? z.ZodString
   : T extends number
   ? z.ZodNumber
   : T extends boolean
   ? z.ZodBoolean
+  : T extends [...infer Tuple]
+  ? z.ZodTuple<{ [K in keyof Tuple]: TypeToZod<Tuple[K]> }>
   : T extends Array<infer U>
   ? z.ZodArray<TypeToZod<U>>
   : T extends object
   ? z.ZodObject<{ [K in keyof T]: TypeToZod<T[K]> }>
-  : any;
-
-export interface FlowConfig<Input = any, Output = any> {
-  input?: {
-    schema?: TypeToZod<Input>
-    default?: Input
-  },
-  output?: {
-    schema?: TypeToZod<Output>
-  },
-};
+  : z.ZodAny
 
 export type MaybeNullableInput<Input, Config extends FlowConfig> = Config["output"] extends null | undefined 
  ? Input | undefined

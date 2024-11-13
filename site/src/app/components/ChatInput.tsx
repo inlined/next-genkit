@@ -10,22 +10,23 @@ const ChatInput =  ({setLog, log}: {log: Message[], setLog: (message: Message[])
         }
     })
 
-    async function sendMessage() {
-        const inputValue = inputRef.current?.value;
-        if (!inputValue) {
-            return;
-        }
-
+    async function sendMessage(message: string) {
         const original = [...log]
-        setLog([...original, {sender: "user" as const, message: inputValue}, { sender: "model", message: "..."}]);
+        setLog([...original, {sender: "user" as const, message}, { sender: "model", message: "..."}]);
         const response = await fetch("/api/chat", {
             method: "POST",
-            body: JSON.stringify({ history: original, query: inputValue }),
+            body: JSON.stringify({ history: original, query: message }),
         });
         const body = await response.text();
         console.log("Body is", body);
-        const message = JSON.parse(body)["result"];
-        setLog([...original, {sender: "user", message: inputValue}, { sender: "model", message }]);
+        const resp = JSON.parse(body)
+        if (resp["error"]) {
+            console.error(`Got error: ${JSON.stringify(resp["error"], null, 2)}`)
+            setLog([...original, {sender: "user", message}, {sender: "model", message: `ERROR:
+                _${JSON.stringify(resp["error"], null, 2)}_`}]);
+        } else {
+            setLog([...original, {sender: "user", message}, { sender: "model", message: resp["result"] }]);
+        }
     }
 
     return <div className={styles.input}>
@@ -36,15 +37,16 @@ const ChatInput =  ({setLog, log}: {log: Message[], setLog: (message: Message[])
         className={styles.inputText}
         onKeyDown={(event) => {
             if (event.key === 'Enter' && !event.shiftKey) {
-            sendMessage();
+                sendMessage(inputRef.current!.value);
+                inputRef.current!.value = "";
             }
         }}
         />
         <button
         type="submit"
         className={styles.inputButton}
-        onTouchEndCapture={sendMessage}
-        onClick={sendMessage}>Send</button>
+        onTouchEndCapture={() => sendMessage(inputRef.current!.value)}
+        onClick={() => sendMessage(inputRef.current!.value)}>Send</button>
     </div>;
 };
 

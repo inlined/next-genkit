@@ -3,10 +3,10 @@ import { Message } from "@/types";
 import { marked } from "marked";
 
 const ChatLog = ({log}: {log: Message[]}) => {
-    return <div className={styles.log}>
+    return <div key="chatLog" className={styles.log}>
     {log.map((item, index) => 
       item.sender === "model" && item.message === "..." ?
-        <div><span className={styles.thinking} key="thinking">...</span></div>
+        <div key="thinking-div"><span className={styles.thinking} key="thinking">...</span></div>
       : <div
         className={item.sender == "model" ? styles.bot : styles.human}
         key={index}
