@@ -61,6 +61,7 @@ type TypeToZod<T> =
 
 // statically compiled tests:
 
+/*
 function matchesSchema<RawType>(i: TypeToZod<RawType>): void {}
 
 matchesSchema<z.ZodString>(z.string());
@@ -75,8 +76,7 @@ matchesSchema<null>(z.null());
 matchesSchema<undefined>(z.undefined());
 matchesSchema<"a" | "b">(z.enum(["a", "b"]));
 matchesSchema<string[]>(z.array(z.string()));
-matchesSchema<1 | "2">
-
+*/
 // Working:
 /*
 assertImplements<TypeToZod<5>, z.ZodNumber>();

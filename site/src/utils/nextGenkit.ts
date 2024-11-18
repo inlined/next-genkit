@@ -7,16 +7,21 @@ export function caller(skip: number): string {
   return err.stack!.split("\n")[1 + skip];
 }
 
-
 type FlowInput<F> = F extends CallableFlow<infer Input, any> ? Input : never;
 type FlowOutput<F> = F extends CallableFlow<any, infer Output> ? Output : never;
 
-export class NextApiRoute<Flow extends CallableFlow<any, any>>{
-  constructor(private flow: Flow, private opts: { method: "POST" | "GET" | "PUT" } = { method: "POST" }) {}
+const apiRouteRegexp = /\/api\/.*?(?=\/route|:|$)/
 
-  async public (req: NextRequest): Promise<NextResponse> {
+export function nextApiRoute<Flow extends CallableFlow<any, any>>(flow: Flow) {
+  const match = apiRouteRegexp.exec(caller(2));
+  if (!match) {
+    throw new Error("NextApiRoute can only be used inside the /api directory");
+  }
+  const path = match[0];
+
+  const ret = async (req: NextRequest): Promise<NextResponse> => {
     try {
-      const result = await this.flow(await req.json());
+      const result = await flow(await req.json());
       console.log(`Result is ${result}`);
       return NextResponse.json({result});
     } catch (error) {
@@ -25,13 +30,9 @@ export class NextApiRoute<Flow extends CallableFlow<any, any>>{
     }
   }
 
-  public async call(input: z.infer<FlowInput<Flow>>, opts: { method: "POST" | "GET" | "PUT" } = { method: "POST" }): Promise<z.infer<FlowOutput<Flow>>> {
-    const path = caller(/* skip = */2);
-    const match = /\/api([^.])*(\/route\.js)?/.exec(path);
-    if (!match) {
-      throw new Error(`Could not determine route from file ${path}`);
-    }
-    const res = await fetch(`/api/${path}`, {
+  ret.call = async (input: z.infer<FlowInput<Flow>>, opts: { method: "POST" | "GET" | "PUT" } = { method: "POST" }): Promise<z.infer<FlowOutput<Flow>>> => {
+    "use client"
+    const res = await fetch(path, {
       body: JSON.stringify(input),
       method: opts.method,
     });
@@ -46,6 +47,8 @@ export class NextApiRoute<Flow extends CallableFlow<any, any>>{
       return resp["result"];
     }
   }
+
+  return ret;
 }
 
 // TODO: play with type system to use native types and infer Zod

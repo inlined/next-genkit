@@ -1,5 +1,1 @@
-{
-  "node": {},
-  "edge": {},
-  "encryptionKey": "u8SZO3ks517ZVaiOt71kANFL/eGEMi4hyQlO/FpY1gU="
-}
+{"node":{"31caac17c15aa8ba93bea4f4ca9d49e258aee1ba":{"workers":{"app/api/chat/route":{"moduleId":"47219","async":false},"app/page":{"moduleId":"59427","async":false}},"layer":{"app/api/chat/route":"rsc","app/page":"action-browser"}}},"edge":{},"encryptionKey":"u8SZO3ks517ZVaiOt71kANFL/eGEMi4hyQlO/FpY1gU="}

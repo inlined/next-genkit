@@ -2,19 +2,6 @@
 import "./globals.css";
 import { useEffect } from "react";
 
-try {
-    require("fs");
-} catch {
-    console.log("Stubbing fs");
-    const original = window.require;
-    window.require.apply = (module: string) => {
-        if (module === "fs") {
-            return undefined as any as NodeRequire
-        }
-        return original(module) as NodeRequire;
-    }
-}
-
 function useResponsiveHeight() {
   useEffect(() => {
     // Define the function to update the body's height
