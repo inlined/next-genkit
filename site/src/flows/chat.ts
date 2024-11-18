@@ -1,7 +1,6 @@
 import { ai } from "./init";
-import { ChatRequestSchema } from "@/types";
+import { ChatRequest, ChatRequestSchema } from "@/types";
 import * as z from "zod";
-import { ZodString } from "zod";
 
 // TODO: Move into dotprompt file.
 // TODO: Figure out why this doesn't actually provide any help even when adding groundSearchRetrieval
@@ -27,11 +26,7 @@ Please answer the user's question or continue the conversation.
 `.trim();
 */
 
-const promptText = `
-{{role "user"}}
- {{query}}
-
-{{ role "system"}}
+const system = `
  You are an avid scuba diver and expert instructor. You would like to help people learn
  about scuba, whether they are curious to try it out or would like to learn more
  details, including technical information. Always prioritize safety, including
@@ -43,6 +38,13 @@ const promptText = `
  one of the oldest and most popular scuba organizations in the world.
  If a user asks how to get started, tell them that they need to look at the medical
  form because they may need a doctor's signature before they are allowed in the water.
+`.trim();
+
+/*const promptText = `
+{{role "user"}}
+ {{query}}
+
+{{ role "system"}}
  
 The following is the history of your conversation:
 {{history}}
@@ -61,11 +63,33 @@ const prompt = ai.definePrompt<typeof ChatRequestSchema, ZodString>({
     model: "vertexai/gemini-1.5-flash",
 }, promptText);
 
+class MessageStore implements SessionStore<string> {
+constructor(private history: ChatRequest["history"]) {}
+    get(session: string): Promise<SessionData> { 
+        return Promise.resolve({
+            id: session,
+            threads: {
+                main: this.history.map(h => { return { role: h.sender, content: [ { text: h.message } ]}; }),
+            }
+        })
+    }
+    save(session: string, sessionData: Omit<SessionData<string>, "id">) {
+        return Promise.resolve();
+    }
+}
+
+*/
+
 export const chat = ai.defineFlow({
     name: "chat",
     inputSchema: ChatRequestSchema,
     outputSchema: z.string(),
-}, async (input): Promise<string> => {
-    console.log("About to send prompt:", JSON.stringify(input, null, 2));
-    return (await prompt(input)).output!;
+}, async (input: ChatRequest): Promise<string> => {
+    const chat = ai.chat({
+        system,
+        messages: input.history.map(h => { return { role: h.sender, content: [ { text: h.message }]}; }),
+    });
+    const { text } = await chat.send(input.query);
+
+    return text;
 });
