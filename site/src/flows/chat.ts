@@ -82,16 +82,22 @@ constructor(private history: ChatRequest["history"]) {}
 
 */
 
-export const chat = ai.defineFlow({
+export const chat = ai.defineStreamingFlow({
     name: "chat",
     inputSchema: ChatRequestSchema,
+    streamSchema: z.string(),
     outputSchema: z.string(),
-}, async (input: ChatRequest): Promise<string> => {
+}, async (input: ChatRequest, streamingCallback): Promise<string> => {
     const chat = ai.chat({
         system,
         messages: input.history.map(h => { return { role: h.sender, content: [ { text: h.message }]}; }),
     });
-    const { text } = await chat.send(input.query);
+    const { stream, response } = await chat.sendStream<z.ZodString>(input.query);
+    if (streamingCallback) {
+        for await (const chunk of stream) {
+            streamingCallback(chunk.text);
+        }
+    }
 
-    return text;
+    return (await response).text;
 });

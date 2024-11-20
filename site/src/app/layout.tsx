@@ -1,4 +1,5 @@
 "use client"
+import connectGenkitUI from "@/utils/connectGenkitUI";
 import "./globals.css";
 import { useEffect } from "react";
 
