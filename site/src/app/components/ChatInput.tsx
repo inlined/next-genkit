@@ -16,7 +16,7 @@ const ChatInput =  ({setLog, log}: {log: Message[], setLog: (message: Message[])
         const original = [...log]
         setLog([...original, {sender: "user" as const, message}, { sender: "model", message: "..."}]);
         try {
-            const text = await callFlow<typeof chat>.call("/api/chat", { history: original, query: message });
+            const text = await callFlow("/api/chat", { history: original, query: message });
             setLog([...original, { sender: "user" as const, message }, { sender: "model", message: text }])
         } catch (error) {
             console.error(error);

@@ -11,8 +11,8 @@ export function caller(skip: number = 0): string {
   return err.stack!.split("\n")[3 + skip];
 }
 
-type FlowInput<F> = F extends CallableFlow<infer Input, any> ? Input : never;
-type FlowOutput<F> = F extends CallableFlow<any, infer Output> ? Output : never;
+type FlowInput<F> = F extends CallableFlow<infer Input, any> ? z.infer<Input> : never;
+type FlowOutput<F> = F extends CallableFlow<any, infer Output> ? z.infer<Output> : never;
 
 const apiRouteRegexp = /\/api\/.*?(?=\/route|:|$)/
 
@@ -22,8 +22,7 @@ export function nextApiRoute<Flow extends CallableFlow<any, any>>(flow: Flow) {
   return async (req: NextRequest): Promise<NextResponse> => {
     try {
       // Try to force the error just to see what happens
-      const { output } = await flow(await req.json());
-      console.log(`Result is ${JSON.stringify(output, null, 2)}`);
+      const output = await flow(await req.json());
       return NextResponse.json({result: output});
     } catch (error) {
       console.log("Got error", error);

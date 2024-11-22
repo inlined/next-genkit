@@ -1,4 +1,4 @@
-"use server"
+"use server";
 
 import { ai } from "./init";
 import { ChatRequest, ChatRequestSchema } from "@/types";
@@ -90,9 +90,8 @@ export const chat = ai.defineFlow({
         system,
         messages: input.history.map(h => { return { role: h.sender, content: [ { text: h.message }]}; }),
     });
-    const response = await chat.send(input.query);
-    console.log("Chat response is ", JSON.stringify(response, null, 2));
-    return response.text;
+    const { text } = await chat.send(input.query);
+    return text;
 });
 
 export const streamingChat = ai.defineStreamingFlow({
