@@ -1,6 +1,5 @@
 import styles from "./ChatLog.module.css"
 import { Message } from "@/types";
-import { marked } from "marked";
 
 const ChatLog = ({log}: {log: Message[]}) => {
     return <div key="chatLog" className={styles.log}>
@@ -10,7 +9,7 @@ const ChatLog = ({log}: {log: Message[]}) => {
       : <div
         className={item.sender == "model" ? styles.bot : styles.human}
         key={index}
-        dangerouslySetInnerHTML={{ __html: marked(item.message)}} />
+        dangerouslySetInnerHTML={{ __html: item.message}} />
     )}
   </div>
 }

@@ -1,4 +1,4 @@
-import * as z from 'zod';
+import { z } from "genkit";
 
 type RequiredFields<T> = {
   [K in keyof T]: {} extends Pick<T, K> ? never : K;

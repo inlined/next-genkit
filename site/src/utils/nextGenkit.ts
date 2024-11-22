@@ -2,7 +2,7 @@
 
 import { CallableFlow, Flow } from "genkit";
 import { NextRequest, NextResponse } from "next/server";
-import * as z from "zod";
+import { z } from "genkit";
 export * from "./connectGenkitUI";
 
 export function caller(skip: number = 0): string {
@@ -22,7 +22,7 @@ export function nextApiRoute<Flow extends CallableFlow<any, any>>(flow: Flow) {
   return async (req: NextRequest): Promise<NextResponse> => {
     try {
       // Try to force the error just to see what happens
-      const { output } = await flow(await req.json());
+      const output = await flow(await req.json());
       console.log(`Result is ${JSON.stringify(output, null, 2)}`);
       return NextResponse.json({result: output});
     } catch (error) {

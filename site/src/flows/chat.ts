@@ -1,8 +1,8 @@
-"use server"
+"use server";
 
 import { ai } from "./init";
 import { ChatRequest, ChatRequestSchema } from "@/types";
-import * as z from "zod";
+import { z } from "genkit";
 
 // TODO: Move into dotprompt file.
 // TODO: Figure out why this doesn't actually provide any help even when adding groundSearchRetrieval
