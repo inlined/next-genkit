@@ -36,10 +36,11 @@ interface CallFlowOpts {
   method?: "POST" | "GET" | "PUT";
 }
 
-export async function callFlow<Flow extends CallableFlow>(path: string, input: z.infer<FlowInput<Flow>>): Promise<z.infer<FlowOutput<Flow>>>;
-export async function callFlow<Flow extends CallableFlow>(opts: CallFlowOpts, input: z.infer<FlowInput<Flow>>): Promise<z.infer<FlowOutput<Flow>>>;
+type UntypedFlow = CallableFlow<z.ZodAny, z.ZodAny>
+export async function callFlow<Flow extends UntypedFlow = UntypedFlow>(path: string, input: FlowInput<Flow>): Promise<FlowOutput<Flow>>;
+export async function callFlow<Flow extends UntypedFlow = UntypedFlow>(opts: CallFlowOpts, input: FlowInput<Flow>): Promise<FlowOutput<Flow>>;
 
-export async function callFlow<Flow extends CallableFlow>(pathOrOpts: string | CallFlowOpts, input: z.infer<FlowInput<Flow>>):  Promsie<z.infer<FlowOutput<Flow>>> {
+export async function callFlow<Flow extends UntypedFlow = UntypedFlow>(pathOrOpts: string | CallFlowOpts, input: FlowInput<Flow>):  Promise<FlowOutput<Flow>> {
   let path: string;
   let method: CallFlowOpts["method"];
 
@@ -61,8 +62,8 @@ export async function callFlow<Flow extends CallableFlow>(pathOrOpts: string | C
   console.log("Body is", body);
   const resp = JSON.parse(body)
   if (resp["error"]) {
-      console.error(`Got error: ${JSON.stringify(resp["error"], null, 2)}`)
-      throw new Error(resp["error"]);
+    console.error(`Got error: ${JSON.stringify(resp["error"], null, 2)}`)
+    throw new Error(resp["error"]);
   } else {
     return resp["result"];
   }
