@@ -79,11 +79,24 @@ constructor(private history: ChatRequest["history"]) {}
         return Promise.resolve();
     }
 }
-
 */
 
-export const chat = ai.defineStreamingFlow({
+export const chat = ai.defineFlow({
     name: "chat",
+    inputSchema: ChatRequestSchema,
+    outputSchema: z.string(),
+}, async (input: ChatRequest): Promise<string> => {
+    const chat = ai.chat({
+        system,
+        messages: input.history.map(h => { return { role: h.sender, content: [ { text: h.message }]}; }),
+    });
+    const response = await chat.send(input.query);
+    console.log("Chat response is ", JSON.stringify(response, null, 2));
+    return response.text;
+});
+
+export const streamingChat = ai.defineStreamingFlow({
+    name: "streamingChat",
     inputSchema: ChatRequestSchema,
     streamSchema: z.string(),
     outputSchema: z.string(),
@@ -99,5 +112,5 @@ export const chat = ai.defineStreamingFlow({
         }
     }
 
-    return (await response).text;
+    return (await response).output || "";
 });

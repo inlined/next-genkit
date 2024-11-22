@@ -2,8 +2,8 @@
 
 import { CallableFlow, Flow } from "genkit";
 import { NextRequest, NextResponse } from "next/server";
-import path from "path";
 import * as z from "zod";
+export * from "./connectGenkitUI";
 
 export function caller(skip: number = 0): string {
   // Use server ensures we get the non-bundled filename
@@ -19,46 +19,53 @@ const apiRouteRegexp = /\/api\/.*?(?=\/route|:|$)/
 // TODO: rewrite. The helper function doesn't work in prod so we need an appRoute(flow), pagesRoute(flow)
 // for server-side as well as a call() and stream() method for client-side.
 export function nextApiRoute<Flow extends CallableFlow<any, any>>(flow: Flow) {
-  let path: string;
-  const match = apiRouteRegexp.exec(caller());
-  if (!match) {
-    throw new Error("NextApiRoute can only be used inside the /api directory");
-  } else {
-    path = match[0];
-  }
-
-  const ret = async (req: NextRequest): Promise<NextResponse> => {
+  return async (req: NextRequest): Promise<NextResponse> => {
     try {
       // Try to force the error just to see what happens
-      const result = await flow(await req.json());
-      console.log(`Result is ${result}`);
-      return NextResponse.json({result});
+      const { output } = await flow(await req.json());
+      console.log(`Result is ${JSON.stringify(output, null, 2)}`);
+      return NextResponse.json({result: output});
     } catch (error) {
       console.log("Got error", error);
       return NextResponse.json({error})
     }
   }
+}
 
-  ret.call = async (input: z.infer<FlowInput<Flow>>, opts: { method: "POST" | "GET" | "PUT" } = { method: "POST" }): Promise<z.infer<FlowOutput<Flow>>> => {
-    if (!path) {
-      throw new Error("Path could not be determined");
-    }
-    const res = await fetch(path, {
-      body: JSON.stringify(input),
-      method: opts.method,
-    });
-    
-    const body = await res.text();
-    console.log("Body is", body);
-    const resp = JSON.parse(body)
-    if (resp["error"]) {
-        console.error(`Got error: ${JSON.stringify(resp["error"], null, 2)}`)
-        throw new Error(resp["error"]);
-    } else {
-      return resp["result"];
-    }
+interface CallFlowOpts {
+  path: string;
+  method?: "POST" | "GET" | "PUT";
+}
+
+export async function callFlow<Flow extends CallableFlow>(path: string, input: z.infer<FlowInput<Flow>>): Promise<z.infer<FlowOutput<Flow>>>;
+export async function callFlow<Flow extends CallableFlow>(opts: CallFlowOpts, input: z.infer<FlowInput<Flow>>): Promise<z.infer<FlowOutput<Flow>>>;
+
+export async function callFlow<Flow extends CallableFlow>(pathOrOpts: string | CallFlowOpts, input: z.infer<FlowInput<Flow>>):  Promsie<z.infer<FlowOutput<Flow>>> {
+  let path: string;
+  let method: CallFlowOpts["method"];
+
+  if (typeof pathOrOpts === "string") {
+    path = pathOrOpts;
+    method = "POST";
+  } else {
+    path = pathOrOpts.path;
+    method = pathOrOpts.method ?? "POST";
   }
 
-  return ret;
+  console.log("Fetching", path);
+  const res = await fetch(path, {
+    body: JSON.stringify(input),
+    method,
+  });
+  
+  const body = await res.text();
+  console.log("Body is", body);
+  const resp = JSON.parse(body)
+  if (resp["error"]) {
+      console.error(`Got error: ${JSON.stringify(resp["error"], null, 2)}`)
+      throw new Error(resp["error"]);
+  } else {
+    return resp["result"];
+  }
 }
 

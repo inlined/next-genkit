@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react";
 import styles from "./ChatInput.module.css";
 import { Message } from "@/types";
-import { POST as chat } from "@/app/api/chat/route";
+import { chat } from "@/flows/chat";
+import { callFlow } from "@/utils/nextGenkit";
 
 const ChatInput =  ({setLog, log}: {log: Message[], setLog: (message: Message[]) => void}) => {
     const inputRef = useRef<HTMLInputElement>(null);
@@ -15,7 +16,7 @@ const ChatInput =  ({setLog, log}: {log: Message[], setLog: (message: Message[])
         const original = [...log]
         setLog([...original, {sender: "user" as const, message}, { sender: "model", message: "..."}]);
         try {
-            const text = await chat.call({ history: original, query: message })
+            const text = await callFlow<typeof chat>.call("/api/chat", { history: original, query: message });
             setLog([...original, { sender: "user" as const, message }, { sender: "model", message: text }])
         } catch (error) {
             console.error(error);
