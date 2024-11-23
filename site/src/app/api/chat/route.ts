@@ -1,4 +1,4 @@
 import { chat } from "@/flows/chat";
-import { nextApiRoute } from "@/utils/nextGenkit";
+import { routeHandler } from "@/utils/nextGenkit";
 
-export const POST = nextApiRoute(chat);
+export const POST = routeHandler(chat);

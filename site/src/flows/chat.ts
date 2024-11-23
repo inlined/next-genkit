@@ -1,5 +1,3 @@
-"use server";
-
 import { ai } from "./init";
 import { ChatRequest, ChatRequestSchema } from "@/types";
 import * as z from "zod";

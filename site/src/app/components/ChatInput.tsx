@@ -14,10 +14,13 @@ const ChatInput =  ({setLog, log}: {log: Message[], setLog: (message: Message[])
 
     async function sendMessage(message: string) {
         const original = [...log]
-        setLog([...original, {sender: "user" as const, message}, { sender: "model", message: "..."}]);
+        const setMessage = (model: string) => {
+            setLog([...original, {sender: "user", message}, { sender: "model", message: model}]);
+        }
+        setMessage("...");
         try {
-            const text = await callFlow("/api/chat", { history: original, query: message });
-            setLog([...original, { sender: "user" as const, message }, { sender: "model", message: text }])
+            const text = await callFlow<typeof chat>("/api/chat", { history: original, query: message });
+            setMessage(text);
         } catch (error) {
             console.error(error);
         }

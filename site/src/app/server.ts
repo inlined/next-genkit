@@ -1,3 +1,3 @@
-import connectGenkitUI from '@/utils/connectGenkitUI';
+import { connectGenkitUI } from '@/utils/connectGenkitUI';
 
 connectGenkitUI();
