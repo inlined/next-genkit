@@ -14,10 +14,10 @@ type FlowInput<F> =
   : never;
 type FlowOutput<F> = F extends CallableFlow<any, infer Output>
   ? z.infer<Output>
-  : F extends StreamableFlow<any, any, infer Output>
+  : F extends StreamableFlow<any, infer Output, any>
   ? z.infer<Output>
   : never;
-type FlowStream<F> = F extends StreamableFlow<any, infer S, any> ? S : never;
+type FlowStream<F> = F extends StreamableFlow<any, any, infer S> ? z.infer<S> : never;
 
 const apiRouteRegexp = /\/api\/.*?(?=\/route|:|$)/
 
@@ -77,7 +77,6 @@ interface CallFlowOpts {
 }
 
 type AnyFlow = CallableFlow<any, any> | StreamableFlow<any, any, any>;
-type AnyStreamingFlow= StreamableFlow<any, any, any>
 
 export async function callFlow<Flow extends AnyFlow = AnyFlow>(path: string, input: FlowInput<Flow>): Promise<FlowOutput<Flow>>;
 export async function callFlow<Flow extends AnyFlow = AnyFlow>(opts: CallFlowOpts, input: FlowInput<Flow>): Promise<FlowOutput<Flow>>;
@@ -111,36 +110,66 @@ export async function callFlow<Flow extends AnyFlow = AnyFlow>(pathOrOpts: strin
   }
 }
 
-export async function* streamFlow<Flow extends AnyStreamingFlow = AnyStreamingFlow>(path: string, input: FlowInput<Flow>):  AsyncGenerator<FlowStream<Flow>, FlowOutput<Flow>, void> {
+interface StreamResults<Flow extends AnyFlow> {
+  stream: AsyncGenerator<FlowStream<Flow>, FlowStream<Flow>, void>;
+  output: Promise<FlowOutput<Flow>>;
+}
+
+export function streamFlow<Flow extends AnyFlow = AnyFlow>(path: string, input: FlowInput<Flow>): StreamResults<Flow>;
+export function streamFlow<Flow extends AnyFlow = AnyFlow>(opts: CallFlowOpts, input: FlowInput<Flow>): StreamResults<Flow>;
+export function streamFlow<Flow extends AnyFlow = AnyFlow>(pathOrOpts: string | CallFlowOpts, input: FlowInput<Flow>): StreamResults<Flow> {
+  let path: string;
+  let method: CallFlowOpts["method"];
+
+  if (typeof pathOrOpts === "string") {
+    path = pathOrOpts;
+    method = "POST";
+  } else {
+    path = pathOrOpts.path;
+    method = pathOrOpts.method ?? "POST";
+  }
+
   console.log("Fetching", path);
   const eventSource = new EventSource(path);
   let prevMessage: MessageEvent | null = null;
+  let resolveOutput: (o: FlowOutput<Flow>) => void;
+  let rejectOutput: (err: any) => void;
+  const output = new Promise<FlowOutput<Flow>>((resolve, reject) => { resolveOutput = resolve; rejectOutput = reject; });
 
-  try {
-    while (true) {
-      const next: MessageEvent = await new Promise((resolve, reject) => {
-        eventSource.onmessage = resolve;
-        eventSource.onerror = reject;
-      });
-      if (next.data === "END") {
-        break;
+  return {
+    stream: (async function*(): StreamResults<Flow>["stream"] {
+      try {
+        while (true) {
+          const next: MessageEvent = await new Promise((resolve, reject) => {
+            eventSource.onmessage = resolve;
+            eventSource.onerror = reject;
+          });
+          if (next.data === "END") {
+            break;
+          }
+          if (prevMessage) {
+            yield JSON.parse(prevMessage.data) as FlowStream<Flow>;
+          }
+          prevMessage = next;
+        }
+      } catch (err) {
+        throw new Error("SSE Error: " + JSON.stringify(err));
+      } finally {
+        eventSource.close();
       }
-      if (prevMessage) {
-        yield JSON.parse(prevMessage.data) as FlowStream<Flow>;
-      }
-      prevMessage = next;
-    }
-  } catch (err) {
-    throw new Error("SSE Error: " + err);
-  } finally {
-    eventSource.close();
-  }
 
-  // Handle void?
-  const final = prevMessage!.data as { data: FlowOutput<Flow> } | { error: any };
-  if ("error" in final) {
-      throw new Error(String(final.error));
+      const final = prevMessage!.data as { data: FlowOutput<Flow> } | { error: any };
+      if ("error" in final) {
+          rejectOutput!(new Error(String(final.error)));
+          throw new Error(String(final.error));
+      }
+      resolveOutput!(final.data);
+      return final.data;
+    })(),
+    // There's some type coercion necessary here because FlowOutput always extends promise but doesn't
+    // document itself as such, so even if I did new Promise<NoPromise<FlowOutput>> it would still not be the
+    // same type as FlowOutput.
+    output: output,
   }
-  return final.data;
 }
 

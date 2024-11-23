@@ -1,8 +1,8 @@
 import { useEffect, useRef } from "react";
 import styles from "./ChatInput.module.css";
 import { Message } from "@/types";
-import { chat } from "@/flows/chat";
-import { callFlow } from "@/utils/nextGenkit";
+import { streamingChat } from "@/flows/chat";
+import { streamFlow } from "@/utils/nextGenkit";
 
 const ChatInput =  ({setLog, log}: {log: Message[], setLog: (message: Message[]) => void}) => {
     const inputRef = useRef<HTMLInputElement>(null);
@@ -19,8 +19,12 @@ const ChatInput =  ({setLog, log}: {log: Message[], setLog: (message: Message[])
         }
         setMessage("...");
         try {
-            const text = await callFlow<typeof chat>("/api/chat", { history: original, query: message });
-            setMessage(text);
+            const { stream, output } = streamFlow<typeof streamingChat>("/api/chat", { history: original, query: message });
+            for await (const chunk of stream) {
+                setMessage(chunk);
+            }
+            //const text = await callFlow<typeof chat>("/api/chat", { history: original, query: message });
+            setMessage(await output);
         } catch (error) {
             console.error(error);
         }

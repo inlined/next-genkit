@@ -1,4 +1,4 @@
-import { chat } from "@/flows/chat";
+import { streamingChat } from "@/flows/chat";
 import { routeHandler } from "@/utils/nextGenkit";
 
-export const POST = routeHandler(chat);
+export const GET = routeHandler(streamingChat);
