@@ -10,7 +10,7 @@ body {
 .app {
   display: grid;
   grid-template-columns: 10% minmax(80%, 1fr) 10%;
-  grid-template-rows: 50px 1fr 40px; 
+  grid-template-rows: 50px 1fr 60px; 
   height: 100vh;
   width: 100vw;
   gap: 10px;
@@ -28,9 +28,12 @@ body {
 
 .chat-log {
   grid-area: ChatLog;
-  margin-bottom: 10%;
+  overflow-y: auto;
+  height: 100%;
+  /* margin-bottom: 10%; */
 }
 
 .chat-input {
   grid-area: ChatInput;
+  margin-bottom: 10px;
 }

@@ -33,7 +33,6 @@ export function routeHandler<Flow extends AnyFlow>(flow: Flow) {
     let output = resp instanceof Promise ? resp : resp.output;
 
     if (req.headers.get("accept") !== "text/event-stream") {
-      process.stdout.write("===== SENDING ONE RESULT ====\n");
       try {
         return NextResponse.json({result: await output});
       } catch (error) {
@@ -41,7 +40,6 @@ export function routeHandler<Flow extends AnyFlow>(flow: Flow) {
       }
     }
 
-    process.stdout.write("=== SENDING STREAM ===\n");
     const encoder = new TextEncoder();
     const { readable, writable } = new TransformStream();
     (async () => {

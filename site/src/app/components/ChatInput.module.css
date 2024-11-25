@@ -1,14 +1,58 @@
-.input {
+/* Container for the entire chat input section */
+.container {
     display: flex;
-    gap: 8px;
+    flex-direction: column; /* Stack the toggles and input field vertically */
+    gap: 8px; /* Space between the toggles and the input field */
 }
 
+/* Toggles (checkboxes) section styling */
+.toggles {
+    display: flex;
+    gap: 16px; /* Space between individual toggle labels */
+    justify-content: flex-start; /* Align items to the start of the container */
+    align-items: center; /* Vertically center the labels and checkboxes */
+}
+
+/* Individual toggle label styling */
+.toggles label {
+    font-size: 14px; /* Keep label text readable */
+    color: #333; /* Dark gray text color */
+    cursor: pointer; /* Pointer cursor for better interactivity */
+    display: flex; /* Align the checkbox and text horizontally */
+    align-items: center; /* Vertically center the text with the checkbox */
+}
+
+/* Checkbox styling */
+.toggles input {
+    margin-right: 6px; /* Space between the checkbox and the label text */
+}
+
+/* Input field and button section styling */
+.input {
+    display: flex; /* Arrange input and button side by side */
+    gap: 8px; /* Space between the input field and button */
+}
+
+/* Input text box styling */
 .inputText {
-    flex: 1;
-    border-radius: 8px;
+    flex: 1; /* Allow the input field to take up all available space */
+    border-radius: 8px; /* Rounded corners */
+    padding: 8px; /* Padding inside the text box */
+    border: 1px solid #ccc; /* Light gray border */
 }
 
+/* Send button styling */
 .inputButton {
-    flex-shrink: 0;
-    border-radius: 8px;
+    flex-shrink: 0; /* Prevent the button from shrinking */
+    border-radius: 8px; /* Rounded corners */
+    padding: 8px 16px; /* Padding for a better clickable area */
+    background-color: #007bff; /* Default blue background */
+    color: white; /* White text color */
+    border: none; /* Remove border for a clean look */
+    cursor: pointer; /* Pointer cursor for interactivity */
+}
+
+/* Button hover effect */
+.inputButton:hover {
+    background-color: #0056b3; /* Darker blue on hover */
 }

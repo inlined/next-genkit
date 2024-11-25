@@ -1,3 +1,5 @@
-import { connectGenkitUI } from '@/utils/connectGenkitUI';
+"use server";
 
-connectGenkitUI();
+if (process.env.NODE_ENV === "development") {
+    require("@/flows/chat");
+}
