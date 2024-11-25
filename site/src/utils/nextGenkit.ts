@@ -37,7 +37,6 @@ export function routeHandler<Flow extends AnyFlow>(flow: Flow) {
       try {
         return NextResponse.json({result: await output});
       } catch (error) {
-        console.log("Got error", error);
         return NextResponse.json({error})
       }
     }
@@ -114,17 +113,14 @@ export async function callFlow<Flow extends AnyFlow = AnyFlow>(pathOrOpts: strin
     method = pathOrOpts.method ?? "POST";
   }
 
-  console.log("Fetching", path);
   const res = await fetch(path, {
     body: JSON.stringify(input),
     method,
   });
 
   const body = await res.text();
-  console.log("Body is", body);
   const resp = JSON.parse(body)
   if (resp["error"]) {
-    console.error(`Got error: ${JSON.stringify(resp["error"], null, 2)}`)
     throw new Error(resp["error"]);
   } else {
     return resp["result"];
@@ -159,7 +155,6 @@ export function streamFlow<Flow extends AnyFlow = AnyFlow>(pathOrOpts: string | 
     method = pathOrOpts.method ?? "POST";
   }
 
-  console.log("Fetching " + path);
   const resp = fetch(path, {
     method,
     headers: {
@@ -176,7 +171,6 @@ export function streamFlow<Flow extends AnyFlow = AnyFlow>(pathOrOpts: string | 
   const output = new Promise<FlowOutput<Flow> | null>((resolve, reject) => { resolveOutput = resolve; rejectOutput = reject; });
 
   function decodeSSE(line: string): string {
-    console.log(`decoding line ${line}`);
     if (line.startsWith("error:")) {
       throw new SSEError(line.slice("error:".length).trim());
     }
@@ -192,12 +186,10 @@ export function streamFlow<Flow extends AnyFlow = AnyFlow>(pathOrOpts: string | 
     try {
       afterFetch = await resp;
     } catch(err) {
-      console.log("Networking error", err);
       rejectOutput(err);
       throw err;
     }
     if (!afterFetch.body) {
-      console.error("No body?");
       rejectOutput(new SSEError("No body"));
       return null;
     }
@@ -208,7 +200,6 @@ export function streamFlow<Flow extends AnyFlow = AnyFlow>(pathOrOpts: string | 
       while (true) {
         const read = await reader?.read();
         if (!read) {
-          console.error("Didn't get anything to read");
           break;
         }
 
@@ -216,11 +207,9 @@ export function streamFlow<Flow extends AnyFlow = AnyFlow>(pathOrOpts: string | 
 
         let lines = buffer.split("\n\n");
         buffer = lines.pop() || '';
-        console.log("Buffer is now", buffer);
 
         for (const line of lines) {
           const message = decodeSSE(line);
-          console.log("Decoded message", message);
           if (message === "END") {
             break;
           }
