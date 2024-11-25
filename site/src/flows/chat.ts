@@ -109,5 +109,5 @@ export const streamingChat = ai.defineStreamingFlow({
         }
     }
 
-    return (await response).output || "";
+    return (await response).text || "";
 });

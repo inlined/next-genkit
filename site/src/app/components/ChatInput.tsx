@@ -2,7 +2,10 @@ import { useEffect, useRef } from "react";
 import styles from "./ChatInput.module.css";
 import { Message } from "@/types";
 import { streamingChat } from "@/flows/chat";
-import { streamFlow } from "@/utils/nextGenkit";
+import { callFlow, streamFlow } from "@/utils/nextGenkit";
+
+// TODO: make a UX toggle
+const streaming = true;
 
 const ChatInput =  ({setLog, log}: {log: Message[], setLog: (message: Message[]) => void}) => {
     const inputRef = useRef<HTMLInputElement>(null);
@@ -18,15 +21,30 @@ const ChatInput =  ({setLog, log}: {log: Message[], setLog: (message: Message[])
             setLog([...original, {sender: "user", message}, { sender: "model", message: model}]);
         }
         setMessage("...");
+        let accum = "";
         try {
-            const { stream, output } = streamFlow<typeof streamingChat>("/api/chat", { history: original, query: message });
-            for await (const chunk of stream) {
-                setMessage(chunk);
+            if (!streaming) {
+                console.log("calling flow");
+                const text = await callFlow<typeof streamingChat>("/api/chat", { history: original, query: message });
+                setMessage(accum);
+                return;
             }
-            //const text = await callFlow<typeof chat>("/api/chat", { history: original, query: message });
-            setMessage(await output);
+            console.log("streaming flow");
+            const { stream, output } = streamFlow<typeof streamingChat>("/api/chat", { history: original, query: message });
+            console.log("Got result")
+            for await (const chunk of stream) {
+                console.log("Got chunk", chunk);
+                accum = accum + chunk;
+                setMessage(accum);
+            }
+            const final = await output;
+            console.log("Got final", final);
+            if (final) {
+                setMessage(final);
+            }
         } catch (error) {
             console.error(error);
+            setMessage(accum + "[Error]");
         }
     }
 

@@ -1,8 +1,7 @@
 // fixes caller() method because it runs before turbopack joins files.
 
-import { CallableFlow, Flow, StreamableFlow } from "genkit";
+import { CallableFlow, StreamableFlow } from "genkit";
 import { NextRequest, NextResponse } from "next/server";
-import { writer } from "repl";
 import * as z from "zod";
 export * from "./connectGenkitUI";
 
@@ -12,6 +11,7 @@ type FlowInput<F> =
   : F extends StreamableFlow<infer Input, any, any>
   ? z.infer<Input>
   : never;
+// Manually insert null which can happen from a Flow.
 type FlowOutput<F> = F extends CallableFlow<any, infer Output>
   ? z.infer<Output>
   : F extends StreamableFlow<any, infer Output, any>
@@ -33,6 +33,7 @@ export function routeHandler<Flow extends AnyFlow>(flow: Flow) {
     let output = resp instanceof Promise ? resp : resp.output;
 
     if (req.headers.get("accept") !== "text/event-stream") {
+      process.stdout.write("===== SENDING ONE RESULT ====\n");
       try {
         return NextResponse.json({result: await output});
       } catch (error) {
@@ -41,31 +42,51 @@ export function routeHandler<Flow extends AnyFlow>(flow: Flow) {
       }
     }
 
+    process.stdout.write("=== SENDING STREAM ===\n");
+    const encoder = new TextEncoder();
     const { readable, writable } = new TransformStream();
-    const writer = writable.getWriter();
-    try {
-      for await (const chunk of stream) {
-        await writer.write(new TextEncoder().encode("data: " + JSON.stringify(chunk) + "\n\n"))
+    (async () => {
+      const writer = writable.getWriter();
+      try {
+        for await (const chunk of stream) {
+          process.stdout.write("Writing chunk " + chunk + "\n");
+          await writer.write(new TextEncoder().encode("data: " + JSON.stringify(chunk) + "\n\n"))
+        }
+      } catch (err) {
+        // Failures mid-stream use sse errors. Failures in the final result produce callable errors
+        process.stderr.write("Writing error:" + String(err) + "\n");
+        writer.write(encoder.encode(`error: ${err}` + "\n\n"));
+        await writer.write(encoder.encode("END"));
+        return new NextResponse(readable, {
+          status: 200,
+          headers: {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Transfer-Encoding": "chunked",
+          },
+        });
       }
-    } catch (err) {
-      // Failures mid-stream use sse errors. Failures in the final result produce callable errors
-      writer.write(new TextEncoder().encode(`error: ${err}` + "\n\n"));
-      writer.close();
-    }
 
-    try {
-      writer.write(new TextEncoder().encode("data: " + JSON.stringify(await output)) + "\n\n");
-    } catch (err) {
-      writer.write(new TextEncoder().encode(`data: {"error": ${JSON.stringify(String(err))}}` + "\n\n"))
-    } finally {
-      writer.close();
-    }
+      try {
+        process.stdout.write("Got output" + await output + "\n");
+        writer.write(encoder.encode(`data: {"result": ${JSON.stringify(await output)}}` + "\n\n"));
+        await writer.write(encoder.encode("END"));
+      } catch (err) {
+        writer.write(encoder.encode(`data: {"error": ${JSON.stringify(String(err))}}` + "\n\n"))
+        await writer.write(encoder.encode("END"));
+      } finally {
+        writer.close();
+      }
+    })();
+
     return new NextResponse(readable, {
       status: 200,
       headers: {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
         "Connection": "keep-alive",
+        "Transfer-Encoding": "chunked",
       },
     });
   }
@@ -73,7 +94,7 @@ export function routeHandler<Flow extends AnyFlow>(flow: Flow) {
 
 interface CallFlowOpts {
   path: string;
-  method?: "POST" | "GET" | "PUT";
+  method?: "POST" | "PUT";
 }
 
 type AnyFlow = CallableFlow<any, any> | StreamableFlow<any, any, any>;
@@ -98,7 +119,7 @@ export async function callFlow<Flow extends AnyFlow = AnyFlow>(pathOrOpts: strin
     body: JSON.stringify(input),
     method,
   });
-  
+
   const body = await res.text();
   console.log("Body is", body);
   const resp = JSON.parse(body)
@@ -111,10 +132,19 @@ export async function callFlow<Flow extends AnyFlow = AnyFlow>(pathOrOpts: strin
 }
 
 interface StreamResults<Flow extends AnyFlow> {
-  stream: AsyncGenerator<FlowStream<Flow>, FlowStream<Flow>, void>;
-  output: Promise<FlowOutput<Flow>>;
+  stream: AsyncGenerator<FlowStream<Flow>, FlowStream<Flow> | null, void>;
+  output: Promise<FlowOutput<Flow> | null>;
 }
 
+export class SSEError extends Error {
+  SSEError(message: string) {
+    Error(message);
+  }
+}
+
+// FML. EventSource assumes GET but that makes it hard/non-standard to pass a body (you'd have to do a query string and every framework has their own implementaiton.
+// It's very verbose and eventually you'll start hitting routers' path limit. It also makes no sense to not support POST because that's what you should use for a non-idempotent
+// function...)
 export function streamFlow<Flow extends AnyFlow = AnyFlow>(path: string, input: FlowInput<Flow>): StreamResults<Flow>;
 export function streamFlow<Flow extends AnyFlow = AnyFlow>(opts: CallFlowOpts, input: FlowInput<Flow>): StreamResults<Flow>;
 export function streamFlow<Flow extends AnyFlow = AnyFlow>(pathOrOpts: string | CallFlowOpts, input: FlowInput<Flow>): StreamResults<Flow> {
@@ -129,43 +159,118 @@ export function streamFlow<Flow extends AnyFlow = AnyFlow>(pathOrOpts: string | 
     method = pathOrOpts.method ?? "POST";
   }
 
-  console.log("Fetching", path);
-  const eventSource = new EventSource(path);
-  let prevMessage: MessageEvent | null = null;
-  let resolveOutput: (o: FlowOutput<Flow>) => void;
-  let rejectOutput: (err: any) => void;
-  const output = new Promise<FlowOutput<Flow>>((resolve, reject) => { resolveOutput = resolve; rejectOutput = reject; });
+  console.log("Fetching " + path);
+  const resp = fetch(path, {
+    method,
+    headers: {
+      "content-type": "application/json",
+      "accept": "text/event-stream",
+    },
+    body: JSON.stringify(input),
+  });
 
-  return {
-    stream: (async function*(): StreamResults<Flow>["stream"] {
-      try {
-        while (true) {
-          const next: MessageEvent = await new Promise((resolve, reject) => {
-            eventSource.onmessage = resolve;
-            eventSource.onerror = reject;
-          });
-          if (next.data === "END") {
+  // N.B. To avoid double awaiting output, we stream and resolve/reject a promise within
+  // the stream
+  let resolveOutput: (o: FlowOutput<Flow> | null) => void;
+  let rejectOutput: (err: any) => void;
+  const output = new Promise<FlowOutput<Flow> | null>((resolve, reject) => { resolveOutput = resolve; rejectOutput = reject; });
+
+  function decodeSSE(line: string): string {
+    console.log(`decoding line ${line}`);
+    if (line.startsWith("error:")) {
+      throw new SSEError(line.slice("error:".length).trim());
+    }
+    if (line.startsWith("data:")) {
+      return line.slice("data:".length).trim();
+    }
+    throw new SSEError(`Unexpected SSE response: ${line}`);
+  }
+
+  const streamResults = async function*(): StreamResults<Flow>["stream"] {
+    let buffer = "";
+    let afterFetch: Response;
+    try {
+      afterFetch = await resp;
+    } catch(err) {
+      console.log("Networking error", err);
+      rejectOutput(err);
+      throw err;
+    }
+    if (!afterFetch.body) {
+      console.error("No body?");
+      rejectOutput(new SSEError("No body"));
+      return null;
+    }
+    const reader = afterFetch.body.getReader();
+    const decoder = new TextDecoder();
+    let prevMessage: string | null = null;
+    try {
+      while (true) {
+        const read = await reader?.read();
+        if (!read) {
+          console.error("Didn't get anything to read");
+          break;
+        }
+
+        buffer += decoder.decode(read.value, { stream: true });
+
+        let lines = buffer.split("\n\n");
+        buffer = lines.pop() || '';
+        console.log("Buffer is now", buffer);
+
+        for (const line of lines) {
+          const message = decodeSSE(line);
+          console.log("Decoded message", message);
+          if (message === "END") {
             break;
           }
           if (prevMessage) {
-            yield JSON.parse(prevMessage.data) as FlowStream<Flow>;
+            yield JSON.parse(prevMessage);
           }
-          prevMessage = next;
+          prevMessage = message;
         }
-      } catch (err) {
-        throw new Error("SSE Error: " + JSON.stringify(err));
-      } finally {
-        eventSource.close();
-      }
 
-      const final = prevMessage!.data as { data: FlowOutput<Flow> } | { error: any };
-      if ("error" in final) {
-          rejectOutput!(new Error(String(final.error)));
-          throw new Error(String(final.error));
+        if (buffer === "END") {
+          reader.cancel();
+          break;
+        }
       }
-      resolveOutput!(final.data);
-      return final.data;
-    })(),
+    } catch (err) {
+      throw new SSEError(err ? String(err) : "Unknown Error");
+    }
+
+    if (buffer !== "END") {
+      const lastLine = decodeSSE(buffer);
+      console.warn("Unexpected end of stream in SSE steram");
+      if (prevMessage) {
+        yield JSON.parse(prevMessage);
+        try {
+          yield JSON.parse(lastLine);
+        } catch (err) {
+          console.error("SSE terminated with partial response", lastLine);
+        }
+      }
+      resolveOutput(null);
+      return null;
+    }
+
+    if (!prevMessage) {
+      console.warn("Unexpected empty stream in SSE steram");
+      resolveOutput!(null);
+      return null;
+    }
+
+    const final = JSON.parse(prevMessage) as { data: FlowOutput<Flow> } | { error: any };
+    if ("error" in final) {
+        rejectOutput!(new Error(String(final.error)));
+        throw new Error(String(final.error));
+    }
+    resolveOutput!(final.data);
+    return final.data;
+  }
+
+  return {
+    stream: streamResults(),
     // There's some type coercion necessary here because FlowOutput always extends promise but doesn't
     // document itself as such, so even if I did new Promise<NoPromise<FlowOutput>> it would still not be the
     // same type as FlowOutput.

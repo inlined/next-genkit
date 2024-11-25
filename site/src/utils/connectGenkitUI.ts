@@ -63,7 +63,7 @@ export async function connectGenkitUI(opts: { location: string } = { location: "
 
     const location = path.join(process.cwd(), opts.location);
     console.error("Would load", location);
-    loadESM(location);
+    
     /*
     if ("context" in require) {
       loadWebpack(location);
