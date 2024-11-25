@@ -21,37 +21,41 @@ type FlowStream<F> = F extends StreamableFlow<any, any, infer S> ? z.infer<S> : 
 
 const apiRouteRegexp = /\/api\/.*?(?=\/route|:|$)/
 
-async function* noopStream() {}
+async function* noopStream() { return null; }
 
 // TODO: rewrite. The helper function doesn't work in prod so we need an appRoute(flow), pagesRoute(flow)
 // for server-side as well as a call() and stream() method for client-side.
 export function routeHandler<Flow extends AnyFlow>(flow: Flow) {
   return async (req: NextRequest): Promise<NextResponse> => {
-    const resp = flow(await req.json());
+    const { data } = await req.json();
+    const resp = flow(data);
 
     let stream = "stream" in resp ? resp.stream : noopStream();
     let output = resp instanceof Promise ? resp : resp.output;
 
     if (req.headers.get("accept") !== "text/event-stream") {
       try {
+        console.debug("Non-streaming response:", await output);
         return NextResponse.json({result: await output});
       } catch (error) {
+        console.error("Got error in non-streaming call:", error);
         return NextResponse.json({error})
       }
     }
 
     const encoder = new TextEncoder();
     const { readable, writable } = new TransformStream();
+    console.error("Streaming response that is " + ("stream" in resp ? "steramable" : "not streamable"));
     (async () => {
       const writer = writable.getWriter();
       try {
         for await (const chunk of stream) {
-          process.stdout.write("Writing chunk " + chunk + "\n");
+          console.debug("Writing chunk " + chunk + "\n");
           await writer.write(new TextEncoder().encode("data: " + JSON.stringify(chunk) + "\n\n"))
         }
       } catch (err) {
         // Failures mid-stream use sse errors. Failures in the final result produce callable errors
-        process.stderr.write("Writing error:" + String(err) + "\n");
+        console.debug("Writing SSE error:" + String(err) + "\n");
         writer.write(encoder.encode(`error: ${err}` + "\n\n"));
         await writer.write(encoder.encode("END"));
         return new NextResponse(readable, {
@@ -66,10 +70,11 @@ export function routeHandler<Flow extends AnyFlow>(flow: Flow) {
       }
 
       try {
-        process.stdout.write("Got output" + await output + "\n");
+        console.debug("Got streaming final output" + await output + "\n");
         writer.write(encoder.encode(`data: {"result": ${JSON.stringify(await output)}}` + "\n\n"));
         await writer.write(encoder.encode("END"));
       } catch (err) {
+        console.debug("Returning final streaming error:", err);
         writer.write(encoder.encode(`data: {"error": ${JSON.stringify(String(err))}}` + "\n\n"))
         await writer.write(encoder.encode("END"));
       } finally {
@@ -112,7 +117,7 @@ export async function callFlow<Flow extends AnyFlow = AnyFlow>(pathOrOpts: strin
   }
 
   const res = await fetch(path, {
-    body: JSON.stringify(input),
+    body: JSON.stringify({data: input}),
     method,
   });
 
@@ -159,7 +164,7 @@ export function streamFlow<Flow extends AnyFlow = AnyFlow>(pathOrOpts: string | 
       "content-type": "application/json",
       "accept": "text/event-stream",
     },
-    body: JSON.stringify(input),
+    body: JSON.stringify({ data: input }),
   });
 
   // N.B. To avoid double awaiting output, we stream and resolve/reject a promise within
@@ -169,6 +174,7 @@ export function streamFlow<Flow extends AnyFlow = AnyFlow>(pathOrOpts: string | 
   const output = new Promise<FlowOutput<Flow> | null>((resolve, reject) => { resolveOutput = resolve; rejectOutput = reject; });
 
   function decodeSSE(line: string): string {
+    console.log("Decoding SSE line", line);
     if (line.startsWith("error:")) {
       throw new SSEError(line.slice("error:".length).trim());
     }
@@ -184,10 +190,17 @@ export function streamFlow<Flow extends AnyFlow = AnyFlow>(pathOrOpts: string | 
     try {
       afterFetch = await resp;
     } catch(err) {
+      console.error("Networking error:", err);
       rejectOutput(err);
       throw err;
     }
+    if (!afterFetch.ok) {
+      console.error("Failed request with stauts", afterFetch.status);
+      rejectOutput(new SSEError("Failed request with status " + afterFetch.status));
+      return null;
+    }
     if (!afterFetch.body) {
+      console.error("No body");
       rejectOutput(new SSEError("No body"));
       return null;
     }
@@ -195,9 +208,12 @@ export function streamFlow<Flow extends AnyFlow = AnyFlow>(pathOrOpts: string | 
     const decoder = new TextDecoder();
     let prevMessage: string | null = null;
     try {
+      console.debug("About to read")
       while (true) {
+        console.debug("Read loop");
         const read = await reader?.read();
         if (!read) {
+          console.warn("Reader stopped before we reached a terminal condition");
           break;
         }
 
@@ -205,6 +221,7 @@ export function streamFlow<Flow extends AnyFlow = AnyFlow>(pathOrOpts: string | 
 
         let lines = buffer.split("\n\n");
         buffer = lines.pop() || '';
+        console.debug(`buffer is ${buffer} and lines are ${lines}`);
 
         for (const line of lines) {
           const message = decodeSSE(line);
@@ -212,6 +229,7 @@ export function streamFlow<Flow extends AnyFlow = AnyFlow>(pathOrOpts: string | 
             break;
           }
           if (prevMessage) {
+            console.debug("yielding prevous message ", JSON.stringify(prevMessage));
             yield JSON.parse(prevMessage);
           }
           prevMessage = message;
@@ -225,13 +243,16 @@ export function streamFlow<Flow extends AnyFlow = AnyFlow>(pathOrOpts: string | 
     } catch (err) {
       throw new SSEError(err ? String(err) : "Unknown Error");
     }
+    console.debug(`Done reading. prevMessage is ${prevMessage} and buffer is ${buffer}`);
 
     if (buffer !== "END") {
       const lastLine = decodeSSE(buffer);
-      console.warn("Unexpected end of stream in SSE steram");
+      console.warn("Unexpected end of stream in SSE stream");
       if (prevMessage) {
+        console.debug("Yielding dangling last prevMessage", JSON.stringify(prevMessage));
         yield JSON.parse(prevMessage);
         try {
+          console.debug("Yielding last line, which may be partial", lastLine);
           yield JSON.parse(lastLine);
         } catch (err) {
           console.error("SSE terminated with partial response", lastLine);
@@ -247,13 +268,14 @@ export function streamFlow<Flow extends AnyFlow = AnyFlow>(pathOrOpts: string | 
       return null;
     }
 
-    const final = JSON.parse(prevMessage) as { data: FlowOutput<Flow> } | { error: any };
+    const final = JSON.parse(prevMessage) as { result: FlowOutput<Flow> } | { error: any };
+    console.debug("Got final message", prevMessage);
     if ("error" in final) {
         rejectOutput!(new Error(String(final.error)));
         throw new Error(String(final.error));
     }
-    resolveOutput!(final.data);
-    return final.data;
+    resolveOutput!(final.result);
+    return final.result;
   }
 
   return {

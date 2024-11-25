@@ -37,12 +37,14 @@ const ChatInput =  ({setLog, log}: {log: Message[], setLog: (message: Message[])
             const { stream, output } = isStreamingFlow
                 ? streamFlow<typeof streamingChat>("/api/streamingChat", request)
                 : streamFlow<typeof chat>("/api/chat", request)
-            console.log("Got result")
+            console.debug("About to stream from ", stream);
             for await (const chunk of stream) {
+                console.debug("Got streaming chunk", chunk);
                 accum = accum + chunk;
                 setMessage(accum);
             }
             const final = await output;
+            console.debug("Got final streaming result", final);
             if (final) {
                 setMessage(final);
             }
