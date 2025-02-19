@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import styles from "./ChatInput.module.css";
 import { Message } from "@/types";
 import { chat, streamingChat } from "@/flows/chat";
-import { callFlow, streamFlow } from "@/utils/nextGenkit";
+import { runFlow, streamFlow } from "@genkit-ai/next/client";
 
 // TODO: make a UX toggle
 
@@ -29,14 +29,14 @@ const ChatInput =  ({setLog, log}: {log: Message[], setLog: (message: Message[])
             if (!isStreamingCall) {
                 console.log("calling flow");
                 const text = isStreamingFlow
-                    ? await callFlow<typeof streamingChat>("api/streamingChat", request)
-                    : await callFlow<typeof chat>("/api/chat", request);
+                    ? await runFlow<typeof streamingChat>({ url: "api/streamingChat", input: request})
+                    : await runFlow<typeof chat>({ url: "/api/chat", input: request});
                 setMessage(text);
                 return;
             }
             const { stream, output } = isStreamingFlow
-                ? streamFlow<typeof streamingChat>("/api/streamingChat", request)
-                : streamFlow<typeof chat>("/api/chat", request)
+                ? streamFlow<typeof streamingChat>({ url: "/api/streamingChat", input: request})
+                : streamFlow<typeof chat>({ url: "/api/chat", input: request});
             console.debug("About to stream from ", stream);
             for await (const chunk of stream) {
                 console.debug("Got streaming chunk", chunk);

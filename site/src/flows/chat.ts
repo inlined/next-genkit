@@ -92,21 +92,19 @@ export const chat = ai.defineFlow({
     return text;
 });
 
-export const streamingChat = ai.defineStreamingFlow({
+export const streamingChat = ai.defineFlow({
     name: "streamingChat",
     inputSchema: ChatRequestSchema,
     streamSchema: z.string(),
     outputSchema: z.string(),
-}, async (input: ChatRequest, streamingCallback): Promise<string> => {
+}, async (input: ChatRequest, { sendChunk }): Promise<string> => {
     const chat = ai.chat({
         system,
         messages: input.history.map(h => { return { role: h.sender, content: [ { text: h.message }]}; }),
     });
     const { stream, response } = await chat.sendStream<z.ZodString>(input.query);
-    if (streamingCallback) {
-        for await (const chunk of stream) {
-            streamingCallback(chunk.text);
-        }
+    for await (const chunk of stream) {
+        sendChunk(chunk.text);
     }
 
     return (await response).text || "";

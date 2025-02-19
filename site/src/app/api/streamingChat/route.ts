@@ -1,4 +1,4 @@
 import { streamingChat } from "@/flows/chat";
-import { routeHandler } from "@/utils/nextGenkit";
+import { appRoute } from "@genkit-ai/next";
 
-export const POST = routeHandler(streamingChat);
+export const POST = appRoute(streamingChat);
