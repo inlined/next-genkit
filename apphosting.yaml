@@ -1,3 +1,6 @@
+runConfig:
+  cpuAlwaysAllocated: true
+
 env:
   - variable: GOOGLE_GENAI_API_KEY
     secret: GENKIT_KEY
